@@ -1,419 +1,480 @@
-from django.utils import timezone
-from .models import *
-# Create your views here.
 from django.shortcuts import render
-from django.http import JsonResponse
-from public.models import *
+from django.shortcuts import render,redirect
+from .forms import *
+from django.contrib import auth
+from django.contrib.auth import authenticate,login
+from django.core.mail import send_mail
+from django.conf import settings
+from django.db.models import Q
+from django.contrib import messages
+from django.urls import reverse
+from django.contrib.auth.decorators import login_required
+# Create your views here.
+from datetime import datetime
+from Machinelearning.models import *
+from datetime import datetime, timedelta
+import calendar
 from django.contrib import messages
 
-from random import randint
-import os
-from PIL import Image
-import tkinter as tk
-from tkinter import *
-import csv
-import numpy as np
-from PIL import Image,ImageTk
-import pandas as pd
-import datetime
-import time
-from datetime import date
-from django.shortcuts import render,redirect
-
-import cv2
-import numpy as np
-import tensorflow as tf
-import math
-
-from tensorflow.keras import Model
-from tensorflow.keras.layers import (
-    Add,
-    Concatenate,
-    Conv2D,
-    Input,
-    Lambda,
-    LeakyReLU,
-    UpSampling2D,
-    ZeroPadding2D,
-    BatchNormalization
-)
-from tensorflow.keras.regularizers import l2
-import wget
-#####Window is our Main frame of system
-window = tk.Tk()
-window.title("FAMS-Face Recognition Based Attendance Management System")
-
-window.geometry('1280x720')
-window.configure(background='snow')
-
-
-# final_out = {
-
-#     "head_down": 0,
-#     "head_up": 0,
-#     "head_right": 0,
-#     "head_left" : 0,
-#     "mouth_open" : 0,
-#     "looking_left" : 0,
-#     "looking_right" : 0,
-#     "looking_up" : 0,
-#     "phone_detected": 0,
-#     "no_person": 0,
-#     "mutiple_person":0
-#     }
-
-
-
-
-
-   
-
-# #person & phone
-
-
-
-#     # return render_template("detection.html")
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-def getImagesAndLabels(path):
-    
-    imagePaths = [os.path.join(path, f) for f in os.listdir(path)]
-    
-    # create empth face list
-    faceSamples = []
-    # create empty ID list
-    Ids = []
-    # now looping through all the image paths and loading the Ids and the images
-    for imagePath in imagePaths:
-        
-        # loading the image and converting it to gray scale
-        pilImage = Image.open(imagePath).convert('L')
-        
-        # Now we are converting the PIL image into numpy array
-        imageNp = np.array(pilImage, 'uint8')
-        
-        # getting the Id from the image
-
-        Id = int(os.path.split(imagePath)[-1].split(".")[1])
-        
-        # extract the face from the training image sample
-        faces = detector.detectMultiScale(imageNp)
-        
-        # If a face is there then append that in the list as well as Id of it
-        for (x, y, w, h) in faces:
-            
-            faceSamples.append(imageNp[y:y + h, x:x + w])
-            Ids.append(Id)
-    return faceSamples, Ids
-
-
-
-# #train image
-def trainimg():
-    # print("hello")
-    recognizer = cv2.face.LBPHFaceRecognizer_create()
-    global detector
-    detector = cv2.CascadeClassifier("C:/Users/VICTUS/Desktop/NEW_ATTENDENCE/attendence_venv/employe_project/Machinelearning/haarcascade_frontalface_default.xml")
-    # detector_local = cv2.CascadeClassifier("haarcascade_frontalface_default.xml")
-
-    try:
-        global faces,Id
-        # print("hiiiiii")
-        faces, Id = getImagesAndLabels("C:/Users/VICTUS/Desktop/NEW_ATTENDENCE/attendence_venv/employe_project/Machinelearning/TrainingImage")
-
-       
-    except Exception as e:
-        l='please make "TrainingImage" folder & put Images'
-        Notification.configure(text=l, bg="SpringGreen3", width=50, font=('times', 18, 'bold'))
-        Notification.place(x=350, y=400)
-       
-    recognizer.train(faces, np.array(Id))
-    try:
-        
-        recognizer.save("C:/Users/VICTUS/Desktop/NEW_ATTENDENCE/attendence_venv/employe_project/Machinelearning/TrainingImageLabel/Trainner.yml")
-    except Exception as e:
-        
-        q='Please make "TrainingImageLabel" folder'
-        Notification.configure(text=q, bg="SpringGreen3", width=50, font=('times', 18, 'bold'))
-        Notification.place(x=350, y=400)
-
-    res = "Model Trained"  # +",".join(str(f) for f in Id)
-    Notification.configure(text=res, bg="SpringGreen3", width=50, font=('times', 18, 'bold'))
-    Notification.place(x=250, y=400)
-
-
-# #capturing image
-
-def take_img(request):
-    print("here is the functionsss calll")
-    try:
-        print("hiiiiiiiiiiiiii")
-        Name = request.POST.get('fname')
-        print(Name)
-        
-        Enrollment = request.POST.get('registration')
-        print(Enrollment)
-        if Name == '':
-            err_screen()
-        elif Enrollment == '':
-            err_screen()
-        else:
-            try:
-
-                cam = cv2.VideoCapture(0)
-                detector = cv2.CascadeClassifier('C:/Users/VICTUS/Desktop/NEW_ATTENDENCE/attendence_venv/employe_project/Machinelearning/haarcascade_frontalface_default.xml')
-                print("qwgdfgywe",detector)
-                print("while is true1")
-                print("while is true2")
-                print("while is true3")
-                Name = request.POST.get('fname')
-                Enrollment = request.POST.get('registration')
-                sampleNum = 0
-                while (True):
-                    print("while is true")
-                    
-                    ret, img = cam.read()
-                    gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
-                
-                    faces = detector.detectMultiScale(gray, 1.3, 5)
-                    print(faces)
-                    for (x, y, w, h) in faces:
-                        
-                        cv2.rectangle(img, (x, y), (x + w, y + h), (255, 0, 0), 2)
-                        # incrementing sample number
-                        sampleNum = sampleNum + 1
-                        print("Going to store:!!!!!!!!!!!!!")
-                        
-
-                        # saving the captured face in the dataset folder
-                        cv2.imwrite("C:/Users/VICTUS/Desktop/NEW_ATTENDENCE/attendence_venv/employe_project/Machinelearning/TrainingImage/ " + Name + "." + Enrollment + '.' + str(sampleNum) + ".jpg",
-                                    gray[y:y + h, x:x + w])
-                        cv2.imshow('Frame', img)
-                    # wait for 100 miliseconds
-                    if cv2.waitKey(1) & 0xFF == ord('q'):
-                        
-                        break
-                    # break if the sample number is morethan 100
-                    elif sampleNum > 70:
-                        
-                        break
-                cam.release()
-                cv2.destroyAllWindows()
-                ts = int(time.time())
-                
-                Date = datetime.datetime.fromtimestamp(ts).strftime('%Y-%m-%d')
-                
-                Time = datetime.datetime.fromtimestamp(ts).strftime('%H:%M:%S')
-                
-                row = [Enrollment, Name, Date, Time]
-                
-
-                with open('C:/Users/VICTUS/Desktop/NEW_ATTENDENCE/attendence_venv/employe_project/Machinelearning/StudentDetails/StudentDetails.csv', 'a+') as csvFile:
-                    
-                    writer = csv.writer(csvFile, delimiter=',')
-                    writer.writerow(row)
-                    csvFile.close()
-                res = "Images Saved for Enrollment : " + Enrollment + " Name : " + Name
-                print("helloooooooooooooooooooooooooooooooooooo",res)
-               
-                k= trainimg()
-                Notification.configure(text=res, bg="SpringGreen3", width=50, font=('times', 18, 'bold'))
-                Notification.place(x=250, y=400)
-                
-            except FileExistsError as F:
-                f = 'Student Data already exists'
-                Notification.configure(text=f, bg="Red", width=21)
-                Notification.place(x=450, y=400)
-        return JsonResponse({'success': True, 'message': 'Image captured successfully'})
-    except Exception as e:
-        return JsonResponse({'success': False, 'message': str(e)})
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-# ###for choose subject and fill attendance
-
-
-# import cv2
-# # print(cv2._version_)
-
-# # Add the following import at the beginning of your code
-
-
-
-# # ...
-
-
-
-def Fillattendances(request):
+def index(request):
     today = timezone.now().date()
+    employ=Register.objects.filter(usertype=2)
+    print('emplou',employ)
 
-    uni=Attendence.objects.filter(current_date=today,emid=request.user.id,attendence="Present").first()
-    if uni:
-        messages.error(request, "Already Present")
-        return redirect('/view_Attendence')
-    now = time.time()
-    future = now + 20
-    user_detected = False
-
-    if time.time() < future:
-        print("---------------2----------------")
-        recognizer = cv2.face.LBPHFaceRecognizer_create()
-        try:
-            print("---------------3----------------")    
-            recognizer.read("C:/Users/VICTUS/Desktop/NEW_ATTENDENCE/attendence_venv/employe_project/Machinelearning/TrainingImageLabel/Trainner.yml")
-        except Exception as e:
-         
-            print("---------------4----------------")
-            print("Errorsss",e)
-            e = 'Model not found,Please train model'
-            Notifica.configure(text=e, bg="red", fg="black", width=33, font=('times', 15, 'bold'))
-            Notifica.place(x=20, y=250)
-
-        harcascadePath = "C:/Users/VICTUS/Desktop/NEW_ATTENDENCE/attendence_venv/employe_project/Machinelearning/haarcascade_frontalface_default.xml"
-        faceCascade = cv2.CascadeClassifier(harcascadePath)
-        print("---------------5----------------")
-        df = pd.read_csv("C:/Users/VICTUS/Desktop/NEW_ATTENDENCE/attendence_venv/employe_project/Machinelearning/StudentDetails/StudentDetails.csv")
-        cam = cv2.VideoCapture(0)
-        font = cv2.FONT_HERSHEY_SIMPLEX
-        col_names = ['Enrollment', 'Name', 'Date', 'Time']
-        attendance = pd.DataFrame(columns=col_names)
-        a = Register.objects.get(id=request.user.id)
-        current_user_enrollment = a.registrationid
-        current_user_name = a.username
-        while True:
-            print("---------------6----------------")
-            ret, im = cam.read()
-            gray = cv2.cvtColor(im, cv2.COLOR_BGR2GRAY)
-            faces = faceCascade.detectMultiScale(gray, 1.2, 5)
-            for (x, y, w, h) in faces:
-                global Id
-                Id, conf = recognizer.predict(gray[y:y + h, x:x + w])
-
-                if (conf < 70):
-                    print("----------------7------------------")
-                    global aa
-                    global current_date
-                    global current_timeStamp
-                    ts = time.time()
-                    current_date = datetime.datetime.fromtimestamp(ts).strftime('%Y-%m-%d')
-                    current_timeStamp = datetime.datetime.fromtimestamp(ts).strftime('%H:%M:%S')
-                    aa = df.loc[df['Enrollment'] == Id]['Name'].values
-                    global tt
-                    tt = str(Id) + "-" + aa
-                    En = '15624031' + str(Id)
-                    attendance.loc[len(attendance)] = [Id, aa, current_date, current_timeStamp]
-                    cv2.rectangle(im, (x, y), (x + w, y + h), (0, 260, 0), 7)
-
-                    cv2.putText(im, str(tt), (x + h, y), font, 1, (255, 255, 0,), 4)
-
-                    print("Id",str(Id),"Username",aa, current_user_name)
-                    print("Current user",current_user_enrollment)
-                    print(type(aa))
-                    print("typeof enroll",type(current_user_enrollment))
-                    print(str(Id) == current_user_enrollment)
-                    print(current_user_name in  aa)
-                    user_detected = str(Id) == str(current_user_enrollment) and current_user_name in  aa
-                    print("user_detected",user_detected)
-                    # print(user_detected)
-                    if type(user_detected) == type(True):
-                        print("First Conditionsssss")
-                        if user_detected:
-                            cv2.putText(im, "User detected! Your Attendence Marked.", (10, 30),
-                                        font, 0.8, (0, 0, 0), 2, cv2.LINE_AA)
-                            today = timezone.now().date()
-
-                            att=Attendence.objects.filter(emid=request.user.id,current_date=today).first()
-                            att.attendence = "Present"
-                            att.current_time=timezone.now()
-                            att.save()           
-
-  
-                        else:
-                            cv2.putText(im, "User is not detected! Can't mark Attendence", (10, 30),
-                                        font, 0.8, (0, 0, 0), 2, cv2.LINE_AA)
-                    else:
-                        print("Second Conditionssssssssssssssss")
-                        if user_detected.any():
-                            cv2.putText(im, "User detected! You can now attend the exam.", (10, 30),
-                                        font, 0.8, (0, 0, 0), 2, cv2.LINE_AA)
-                           
-                        else:
-                            cv2.putText(im, "User is not detected! You can not attend the exam.", (10, 30),
-                                        font, 0.8, (0, 0, 0), 2, cv2.LINE_AA)
-                else:
-                    Id = 'Unknown'
-                    tt = str(Id)
-                    cv2.rectangle(im, (x, y), (x + w, y + h), (0, 25, 255), 7)
-                    cv2.putText(im, str(tt), (x + h, y), font, 1, (0, 25, 255), 4)
-
-            if time.time() > future:
-                break
-
-            attendance = attendance.drop_duplicates(['Enrollment'], keep='first')
-            cv2.imshow('Filling attedance..', im)
-            key = cv2.waitKey(30) & 0xff
-            if key == 27:
-                break
-        ts = time.time()
-        current_date = datetime.datetime.fromtimestamp(ts).strftime('%Y-%m-%d')
-        current_timeStamp = datetime.datetime.fromtimestamp(ts).strftime('%H:%M:%S')
-        Hour, Minute, Second = current_timeStamp.split(":")
-        # fileName = "Attendance/" + "_" + current_date + "_" + Hour + "-" + Minute + "-" + Second + ".csv"
-        # attendance = attendance.drop_duplicates(['Enrollment'], keep='first')
-
-        # attendance.to_csv(fileName, index=False)
-        cam.release()
-        cv2.destroyAllWindows()
-        print("user Detected",user_detected)
-        if type(user_detected) == type(True):
-            return redirect('/?user_detected=' + str(user_detected))
+    for i in employ:
+            data=Register.objects.get(id=i.id)
+            uni=Attendence.objects.filter(current_date=today,emid=i.id).first()
+            print(uni)
+            if not uni:   
+                Attendence.objects.create(
+                    emid=data,
+                    current_date=today
+                )
+    return render(request,'index.html')
+def dologin(request):
+    form = LoginForm()
+    if request.method == "POST":
+        user = authenticate(request,username=request.POST["username"],password=request.POST["password"] )
+        if user is None:
+            return render(request,'index.html',{'a':True})
         else:
-            return redirect('/?user_detected=' + str(user_detected.any()))
+            login(request, user)
+            data = Register.objects.get(username=user.username)
+            request.session['ut']=data.usertype
+            data.usertype
+            request.session['userid']=data.id
+            return redirect('/')
+    else:
+        form = LoginForm()
+    return render(request,'login.html',{'form':form})
+def dologout(request):
+    auth.logout(request)
+    return redirect('/')
+def staffadd(request):
+  
+        if request.method == 'POST':
+            
+            form = StaffAddForm(request.POST, request.FILES)
+            try:
+                Register.objects.get(username=request.POST['email'])
+                return render(request,'add_staff.html',{'form':form,'x':True})
+            except Register.DoesNotExist:
+               
+                print(form.is_valid())
+                print(form.errors)
+                if form.is_valid():
+                    Register.objects.create_user(
+                    role = form.cleaned_data['role'],
+                    username = form.cleaned_data['username'],
+                    name = form.cleaned_data['username'],
+                    password=form.cleaned_data['password'],
+                    email=form.cleaned_data['email'],
+                    contact=form.cleaned_data['contact'],
+                    registrationid=form.cleaned_data['registrationid'],
+                    Department=Departments.objects.get(id=request.POST['dep']), 
+                    usertype=2 
+                    )
+                    return redirect('/')
+                else:
+                    return render(request, 'went_wrong.html') 
+             
+        else:
+            form = StaffAddForm()
+            dep=Departments.objects.all()
+            return render(request, 'add_staff.html', {'form': form,'dep':dep})
+  
+@login_required(login_url='/login')
+def staffedit(request, id):
+    data = Register.objects.get(id=id)
+    if request.user.usertype != 1:
+        return render(request, 'access_denied.html')
+    if request.method == 'POST':
+        form = StaffEditForm(request.POST, instance=data)    
+        if form.is_valid():
+            email = form.cleaned_data['email']
+            form.save()
+            return redirect('/view_staff')
+    else:
+        form = StaffEditForm(instance=data)
+    return render(request, 'Edit_staff.html', {'form': form})
+@login_required(login_url='/login')
+def staffdelete(request,id):
+    data=Register.objects.get(id=id)
+    data.delete()
+    return redirect('/view_staff')   
+@login_required(login_url='/login')
+def staffview(request):
+    if request.user.usertype != 1:
+        return render(request, 'access_denied.html')
+    a = Register.objects.exclude(usertype="1")
+    search = request.GET.get('search','')
+    if search:
+        a = a.filter(Q(name__icontains=search)|Q(role__icontains=search)|Q(email__icontains=search))
+        print(a)
+    return render(request,'view_staff.html',{'a':a})
+@login_required(login_url='/login')
+def projectadd(request):
+    if request.method == 'POST':
+        form = ProjectAddForm(request.POST, request.FILES)
+        if form.is_valid():
+            Projects.objects.create(
+             title=form.cleaned_data['title'],
+             description=form.cleaned_data['description'],
+             start_date=form.cleaned_data['start_date'],
+             due_date=form.cleaned_data['due_date'],
+             file=form.cleaned_data['file']
+            )
+            # send_mail(
+            #     subject="Assigned Project",
+            #     message=f"Admin Assigned a project: {project.title} And Your Due Date is: {project.due_date}",
+            #     from_email=settings.EMAIL_HOST_USER,
+            #     recipient_list=[i.email for i in team_members]
+            # )
+            return redirect('/view_project')
+    else:
+        form = ProjectAddForm()
 
-
-
-    return render("index.html")
-
-
-
-
-
-
+    return render(request, 'add_project.html', {'form': form})
+def projectview(request):
+    all_projects = Projects.objects.all()
+    f = Task.objects.all()
+    search = request.GET.get('search', '')
+    selected_project_title = request.GET.get('filter', '') 
+    selected_staff_member_name = request.GET.get('staff_filter', '')
+    if search:
+        all_projects = all_projects.filter(Q(title__icontains=search) | Q(team__team_members__name__icontains=search))
+    if selected_project_title:
+        all_projects = all_projects.filter(title=selected_project_title)
+    staff_members = Register.objects.exclude(usertype=1)
+    distinct_project_titles = Projects.objects.values_list('title', flat=True).distinct()
+    distinct_staff_member = Register.objects.exclude(usertype=1).values_list('name', flat=True).distinct()
+    if selected_staff_member_name:
+        all_projects = all_projects.filter(Q(team__team_members__name__icontains=selected_staff_member_name))
     
+    context = {
+        'all_projects': all_projects,
+        'selected_project_title': selected_project_title,
+        'distinct_project_titles': distinct_project_titles,
+        'staff_member': staff_members,
+        'distinct_staff_member': distinct_staff_member,
+        'selected_staff_member': selected_staff_member_name,
+        
+    }
+    return render(request,'view_project.html', context)
+@login_required(login_url='/login')
+def projectedit(request, id):
+    project = Projects.objects.get(id=id)
+    related_files = project.file.all()
+    if request.method == 'POST':
+        form = ProjectEditForm(request.POST, request.FILES, instance=project)
+        if form.is_valid():
+            updated_project = form.save(commit=False)
+            updated_project.current_date = timezone.now()
+            updated_project.updated_by = request.user
+            updated_project.save()
+            team_members = project.team.team_members.all()
+
+            files = request.FILES.getlist('file_field') 
+            for file in files:
+                upload_file = UploadFile(file=file)
+                upload_file.save()
+                updated_project.file.add(upload_file)
+
+            files_to_remove = request.POST.getlist('remove_files')
+            for file_id in files_to_remove:
+                file_to_remove = UploadFile.objects.get(id=file_id)
+                file_to_remove.file.delete()
+                updated_project.file.remove(file_to_remove)
+
+            send_mail(
+                subject="Updated Project",
+                message=f"Admin Updated a project: {project.title} And Your Due Date is: {project.due_date}",
+                from_email=settings.EMAIL_HOST_USER,
+                recipient_list=[i.email for i in team_members]
+            )
+            return redirect(reverse('view_project_index', args=[project.id]))
+    else:
+        form = ProjectEditForm(instance=project)
+    return render(request, 'edit_project.html', {'form': form, 'project': project, 'related_files': related_files})
+
+@login_required(login_url='/login')    
+def projectdelete(request,id):
+    a = Projects.objects.get(id=id)
+    a.delete()
+    return redirect('/view_project')
+
+def view_staff_project_index(request):
+    a = request.user.id
+    all_projects=  Projects.objects.all()
+    selected_project_title = request.GET.get('filter', '')
+    selected_staff_member_name = request.GET.get('staff_filter', '')
+    search = request.GET.get('search', '')
+    if search:
+        all_projects = Projects.objects.filter(Q(title__icontains=search))
+    if selected_project_title:
+        all_projects = Projects.objects.filter(title=selected_project_title)
+      
+    staff_members = Register.objects.exclude(usertype=1)
+    distinct_project_titles = Projects.objects.values_list('title', flat=True).distinct()
+    distinct_staff_member = Register.objects.exclude(usertype=1).values_list('name', flat=True).distinct()
+    if selected_staff_member_name:
+        all_projects = all_projects.filter(Q(team__team_members__name__icontains=selected_staff_member_name))
+        c = c.filter(Q(team__team_members__name=selected_staff_member_name))
+
+    context = {
+        'all_projects': all_projects,
+        'selected_project_title': selected_project_title,
+        'distinct_project_titles': distinct_project_titles,
+        'staff_member': staff_members
+    }
+    return render(request,'view_staff_project_index.html',context)
+@login_required(login_url='/login')
+def taskadd(request, id):
+    project = Projects.objects.get(id=id)
+    if request.method == 'POST':
+        title = request.POST.get('title')
+        description = request.POST.get('description')
+        start_date = request.POST.get('start_date')
+        due_date = request.POST.get('due_date')
+        file=request.FILES.get('file')
+        task = Task.objects.create(
+            title=title,
+            description=description,
+            start_date=start_date,
+            due_date=due_date,
+            project=project,
+            assigned_staff= Register.objects.get(id=request.POST.get('staff')),
+            file=file
+        )
+        return redirect('/')
+    else:
+        member=Register.objects.filter(usertype=2)
+        return render(request, 'add_subtask.html', {'members': member})
+@login_required(login_url='/login')
+def view_task(request, id):
+        if request.user.usertype == 2:
+            tasks=Task.objects.filter(project=id,assigned_staff=request.user.id)
+            return render(request, 'view_subtasks.html', {'tasks': tasks})
+        else:    
+            tasks=Task.objects.filter(project=id)
+            return render(request, 'view_subtasks.html', {'tasks': tasks})
+@login_required(login_url='/login')
+def view_timesheet(request, id):
+            timesheets=timesheet.objects.filter(task=id)
+            return render(request, 'view_timesheet.html', {'timesheet': timesheets})
+@login_required(login_url='/login')
+def add_timesheet(request, id):
+        form=timesheetAddForm(request.POST)
+        if request.method== "POST":
+           if form.is_valid():
+               timesheet.objects.create(
+                   task=Task.objects.get(id=id),
+                   assigned_staff=Register.objects.get(id=request.user.id),
+                   workinghours=form.cleaned_data['workinghours']
+               )
+               return redirect('/view_timesheet')
+        else:    
+            tasks=Task.objects.filter(project=id)
+            form=timesheetAddForm()
+            return render(request, 'add_timesheet.html', {'tasks': tasks,'form':form})
+        
+@login_required(login_url='/login')
+def add_complaint(request):
+        form=complaintAddForm(request.POST,request.FILES)
+        if request.method== "POST":
+           if form.is_valid():
+               complaints.objects.create(
+                   userid=Register.objects.get(id=request.user.id),
+                   title=form.cleaned_data['title'],
+                   description=form.cleaned_data['description'],
+                   file=form.cleaned_data['file']
+               )
+               return redirect('/view_complaint')
+        else:    
+            form=complaintAddForm()
+            return render(request, 'add_complaints.html', {'form':form})        
+@login_required(login_url='/login')
+def view_complaint(request):
+    if request.user.usertype == 2:
+        view=complaints.objects.filter(userid=request.user.id)
+        return render(request,'view_complaints.html',{'data':view})    
+    else:     
+        view=complaints.objects.all()
+        return render(request,'view_complaints.html',{'data':view})   
+@login_required(login_url='/login')
+def respond(request,id):
+    if request.method =="POST":    
+        com=complaints.objects.get(id=id)
+        com.response=request.POST['response']
+        com.status=1
+        com.save()
+        return redirect('/view_complaint') 
+    else:
+        return render(request,'respond.html')    
+@login_required(login_url='/login')
+def updatetask(request,id):
+    if request.method =="POST":    
+        tas=Task.objects.get(id=id)
+        tas.status=request.POST['status']
+        tas.save()
+        return redirect('/view_task/'+str(id)) 
+    else:
+        return render(request,'taskstatus.html') 
+@login_required(login_url='/login')
+def view_leave(request):
+    if request.user.usertype == 2:
+        lv=leave.objects.filter(userid=request.user.id)
+        return render(request,'leave.html',{'data':lv})    
+    else:     
+        lv=leave.objects.all()
+        return render(request,'leave.html',{'data':lv})       
+
+@login_required(login_url='/login')
+def add_leave(request):
+        form=leaveAddForm(request.POST,request.FILES)
+        if request.method== "POST":
+           if form.is_valid():
+               leave.objects.create(
+                   userid=Register.objects.get(id=request.user.id),
+                   reason=form.cleaned_data['reason'],
+                   date=form.cleaned_data['date'],
+                   ltype=form.cleaned_data['ltype'],
+               )
+               return redirect('/view_leave')
+        else:    
+            form=leaveAddForm()
+            return render(request, 'applyleave.html', {'form':form})      
+        
+@login_required(login_url='/login')
+def respondleave(request,id,dec):
+        if dec == "approve":
+            lv=leave.objects.get(id=id)
+            lv.status=1
+            lv.save()   
+            return redirect('/view_leave') 
+
+        
+        elif dec == "reject":
+            lv=leave.objects.get(id=id)
+            lv.status=2
+            lv.save()
+            return redirect('/view_leave') 
+@login_required(login_url='/login')
+def add_department(request):
+    if(request.method=='POST'):
+        form = departmentaddform(request.POST,request.FILES)
+        try:
+            Departments.objects.get(departmentname=request.POST['departmentname'])
+            return render(request,'add_department.html',{'form':form,'c':True})
+        except Departments.DoesNotExist:
+            if form.is_valid():               
+                Departments.objects.create(
+                    departmentname = form.cleaned_data['departmentname'],
+                  
+                )
+              
+              
+            return redirect('/view_department')
+    else:
+        form = departmentaddform()
+        return render(request,'add_department.html',{'form':form})
+
+@login_required(login_url='/login')
+def view_department(request):
+    dep=Departments.objects.all()
+    return render(request,'view_department.html',{'dep':dep})    
+
+
+@login_required(login_url='/login')
+def view_Attendence(request):
+    if request.user.usertype == 2:
+        att=Attendence.objects.filter(emid=request.user.id)
+        return render(request,'view_attendence.html',{'att':att})    
+    elif request.user.usertype == 1:
+        att=Attendence.objects.all()
+        return render(request,'view_attendence.html',{'att':att})      
+
+@login_required(login_url='/login')
+def updatesalary(request,id):
+    if request.method =="POST":    
+        user=Register.objects.get(id=id)
+        user.salary=request.POST['salary']
+        user.save()
+        return redirect('/view_staff') 
+    else:
+        return render(request,'add_salary.html') 
+
+@login_required(login_url='/login')
+def calculate_salary(request):
+    today = datetime.today()
+    if today.day == 1:
+        last_month = today - timedelta(days=today.day)
+        employees = Register.objects.filter(usertype=2)
+        num_days = monthrange(last_month.year, last_month.month)[1]
+        for employee in employees:
+            attendance_count = Attendance.objects.filter(
+                emid=employee,
+                current_date__month=last_month.month,
+                attendence="Present"
+            ).count()            
+            per_day_salary = employee.salary            
+            total_salary = attendance_count * per_day_salary            
+            Salary.objects.create(
+                eid=employee,
+                salary=total_salary,
+                month=last_month.strftime("%B"),
+                current_date=timezone.now()
+            )
+    elif request.user.usertype == 1:
+                sl=Salary.objects.all()
+                if sl:
+                    return render(request, 'view_salary.html', {'salary':sl})
+                else:
+                    return render(request, 'view_salary.html')
+
+
+
+    elif request.user.usertype == 2:
+                sl=Salary.objects.filter(eid=request.user.id)
+                if sl:
+                    return render(request, 'view_salary.html', {'salary':sl})
+                else:
+                    return render(request, 'view_salary.html')
+    # else:                
+    #     return render(request, 'view_salary.html')        
+
+
+
+@login_required(login_url='/login')
+def deletetask(request,id):
+    ts=Task.objects.get(id=id)
+    ts.delete()
+    referring_url = request.META.get('HTTP_REFERER')
+    return redirect(referring_url or '/')
+
+@login_required(login_url='/login')
+def deletedep(request,id):
+    ts=Departments.objects.get(id=id)
+    ts.delete()
+    referring_url = request.META.get('HTTP_REFERER')
+    return redirect(referring_url or '/')
+
+
+
+
+
+def profile(request):
+    us=Register.objects.get(id=request.user.id)
+    return render(request,'profile.html',{'us':us})    
+
+
+def editprof(request):
+    data=Register.objects.get(id=request.user.id)
+    if request.method == 'POST':
+        form = profiledit(request.POST, instance=data)    
+        if form.is_valid():
+            form.save()
+            return redirect('/profile')
+    else:
+        form = profiledit(instance=data)
+    return render(request, 'Edit_profile.html', {'form': form})
